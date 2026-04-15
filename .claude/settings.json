@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /Users/harishr/Documents/flutter/alertpaati/assets/models)",
+      "Bash(mkdir -p /Users/harishr/Documents/flutter/alertpaati/lib/models)",
+      "Bash(mkdir -p /Users/harishr/Documents/flutter/alertpaati/lib/services)",
+      "Bash(mkdir -p /Users/harishr/Documents/flutter/alertpaati/lib/screens)",
+      "Bash(mkdir -p /Users/harishr/Documents/flutter/alertpaati/lib/widgets)",
+      "Bash(flutter run *)",
+      "Bash(javap -classpath /Users/harishr/.gradle/caches/8.14/transforms/ea00728fb1ba6cf384d16f5629a47670/transformed/tasks-genai-0.10.22-api.jar com.google.mediapipe.tasks.genai.llminference.LlmInference)"
+    ]
+  }
+}
