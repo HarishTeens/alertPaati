@@ -54,14 +54,9 @@ flutter {
 }
 
 dependencies {
-    // MediaPipe LLM Inference API — the production-ready path for Gemma on Android.
-    // LlmInference.Options.setModelPath() accepts raw .bin model files directly;
-    // a .task bundle is NOT required.
-    implementation("com.google.mediapipe:tasks-genai:0.10.22")
+    // LiteRT-LM runtime — required for .litertlm model files (Gemma 4 E2B format)
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.10.2")
 
     // Coroutines for async inference
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
-
-    // JSON for MethodChannel result maps
-    implementation("org.json:json:20240303")
 }

@@ -1,47 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- ── Permissions ─────────────────────────────────────────────────────── -->
-
-    <!-- Phone calls -->
-    <uses-permission android:name="android.permission.CALL_PHONE" />
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    <uses-permission android:name="android.permission.READ_CALL_LOG" />
-    <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
-
-    <!-- Audio recording during call -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-
-    <!-- System overlay for fraud alert banner -->
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-
-    <!-- Foreground service for recording + AI inference during calls -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
-
-    <!-- Wake lock to keep CPU alive during recording -->
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-
-    <!-- Internet (optional: for cloud STT fallback) -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- ── Hardware features ───────────────────────────────────────────────── -->
-    <uses-feature
-        android:name="android.hardware.microphone"
-        android:required="true" />
-    <uses-feature
-        android:name="android.hardware.telephony"
-        android:required="false" />
-
     <application
-        android:label="KAVACH"
+        android:label="Gemma Chat"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:hardwareAccelerated="true">
 
-        <!-- ── Main Activity ──────────────────────────────────────────────── -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -58,41 +25,13 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Handle tel: URIs so KAVACH appears in the Open With chooser -->
-            <intent-filter>
-                <action android:name="android.intent.action.DIAL" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="tel" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.CALL" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="tel" />
-            </intent-filter>
         </activity>
 
-        <!--
-            KavachConnectionService owns the call lifecycle.
-            Must be exported so TelecomManager can bind to it.
-            BIND_TELECOM_CONNECTION_SERVICE restricts binding to the platform.
-        -->
-        <service
-            android:name=".KavachConnectionService"
-            android:exported="true"
-            android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE">
-            <intent-filter>
-                <action android:name="android.telecom.ConnectionService" />
-            </intent-filter>
-        </service>
-
-        <!-- Flutter embedding -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
 
-    <!-- Required for Flutter text-processing plugin -->
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT" />

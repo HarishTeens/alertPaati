@@ -4,32 +4,16 @@ import 'package:provider/provider.dart';
 import '../models/model_state.dart';
 import '../services/native_bridge.dart';
 
-// Raw .bin model files — compatible with MediaPipe LlmInference.setModelPath().
-// Accept terms at huggingface.co/google/gemma-3-1b-it-litert-preview first.
+// LiteRT .litertlm model files — compatible with MediaPipe LlmInference.setModelPath().
+// Accept terms at huggingface.co/litert-community/gemma-4-E2B-it-litert-lm first.
 const _kModelVariants = [
   _ModelVariant(
-    label: 'Gemma 3 — 1B int8 (CPU, recommended)',
-    fileName: 'gemma-3-1b-it-cpu-int8.bin',
-    sizeLabel: '~1.3 GB',
-    url: 'https://huggingface.co/google/gemma-3-1b-it-litert-preview'
-        '/resolve/main/gemma-3-1b-it-cpu-int8.bin',
+    label: 'Gemma 4 — E2B compressed (recommended)',
+    fileName: 'gemma-4-E2B-it.litertlm',
+    sizeLabel: '~2.6 GB',
+    url: 'https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm'
+        '/resolve/main/gemma-4-E2B-it.litertlm',
     useGpu: false,
-  ),
-  _ModelVariant(
-    label: 'Gemma 3 — 4B int4 (CPU, higher accuracy)',
-    fileName: 'gemma-3-4b-it-cpu-int4.bin',
-    sizeLabel: '~2.8 GB',
-    url: 'https://huggingface.co/google/gemma-3-4b-it-litert-preview'
-        '/resolve/main/gemma-3-4b-it-cpu-int4.bin',
-    useGpu: false,
-  ),
-  _ModelVariant(
-    label: 'Gemma 3 — 1B int8 (GPU)',
-    fileName: 'gemma-3-1b-it-gpu-int8.bin',
-    sizeLabel: '~1.3 GB',
-    url: 'https://huggingface.co/google/gemma-3-1b-it-litert-preview'
-        '/resolve/main/gemma-3-1b-it-gpu-int8.bin',
-    useGpu: true,
   ),
 ];
 
@@ -41,9 +25,7 @@ class ModelScreen extends StatefulWidget {
 }
 
 class _ModelScreenState extends State<ModelScreen> {
-  final _tokenController = TextEditingController();
-  _ModelVariant _selected = _kModelVariants.first;
-  bool _showToken = false;
+  final _ModelVariant _selected = _kModelVariants.first;
   StreamSubscription<Map<String, dynamic>>? _progressSub;
 
   @override
@@ -57,7 +39,6 @@ class _ModelScreenState extends State<ModelScreen> {
   @override
   void dispose() {
     _progressSub?.cancel();
-    _tokenController.dispose();
     super.dispose();
   }
 
@@ -67,15 +48,9 @@ class _ModelScreenState extends State<ModelScreen> {
   }
 
   Future<void> _startDownload() async {
-    final token = _tokenController.text.trim();
-    if (token.isEmpty) {
-      _showTokenRequiredSnack();
-      return;
-    }
     await NativeBridge.instance.startDownload(
       url: _selected.url,
       fileName: _selected.fileName,
-      authToken: token,
     );
   }
 
@@ -118,14 +93,6 @@ class _ModelScreenState extends State<ModelScreen> {
     if (mounted) context.read<ModelState>().setNotDownloaded();
   }
 
-  void _showTokenRequiredSnack() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Paste your HuggingFace token to authenticate the download.'),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final modelState = context.watch<ModelState>();
@@ -145,13 +112,8 @@ class _ModelScreenState extends State<ModelScreen> {
           switch (modelState.status) {
             ModelStatus.notDownloaded || ModelStatus.error =>
               _DownloadForm(
-                variants: _kModelVariants,
-                selected: _selected,
-                tokenController: _tokenController,
-                showToken: _showToken,
+                model: _selected,
                 errorMessage: modelState.errorMessage,
-                onVariantChanged: (v) => setState(() => _selected = v),
-                onToggleToken: () => setState(() => _showToken = !_showToken),
                 onDownload: _startDownload,
               ),
             ModelStatus.downloading || ModelStatus.paused =>
@@ -184,8 +146,6 @@ class _ModelScreenState extends State<ModelScreen> {
               ),
           },
 
-          const SizedBox(height: 24),
-          const _HowToGetTokenCard(),
         ],
       ),
     );
@@ -201,7 +161,7 @@ class _StatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (icon, label, color) = switch (status) {
-      ModelStatus.ready    => (Icons.check_circle, 'Model ready — AI fraud detection active', Colors.green),
+      ModelStatus.ready    => (Icons.check_circle, 'Model ready — tap Start Chatting', Colors.green),
       ModelStatus.downloaded => (Icons.download_done, 'Downloaded — tap Load to activate', Colors.blue),
       ModelStatus.loading  => (Icons.hourglass_top, 'Loading model into memory…', Colors.orange),
       ModelStatus.downloading || ModelStatus.paused =>
@@ -226,23 +186,13 @@ class _StatusCard extends StatelessWidget {
 }
 
 class _DownloadForm extends StatelessWidget {
-  final List<_ModelVariant> variants;
-  final _ModelVariant selected;
-  final TextEditingController tokenController;
-  final bool showToken;
+  final _ModelVariant model;
   final String errorMessage;
-  final ValueChanged<_ModelVariant> onVariantChanged;
-  final VoidCallback onToggleToken;
   final VoidCallback onDownload;
 
   const _DownloadForm({
-    required this.variants,
-    required this.selected,
-    required this.tokenController,
-    required this.showToken,
+    required this.model,
     required this.errorMessage,
-    required this.onVariantChanged,
-    required this.onToggleToken,
     required this.onDownload,
   });
 
@@ -251,81 +201,23 @@ class _DownloadForm extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Model variant picker
         Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Select model variant',
-                    style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 8),
-                RadioGroup<_ModelVariant>(
-                  groupValue: selected,
-                  onChanged: (val) { if (val != null) onVariantChanged(val); },
-                  child: Column(
-                    children: variants.map((v) => RadioListTile<_ModelVariant>(
-                      title: Text(v.label),
-                      subtitle: Text(v.sizeLabel,
-                          style: const TextStyle(fontSize: 12)),
-                      value: v,
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                    )).toList(),
-                  ),
-                ),
-              ],
-            ),
+          child: ListTile(
+            leading: const Icon(Icons.memory),
+            title: Text(model.label),
+            subtitle: Text(model.sizeLabel),
           ),
         ),
-        const SizedBox(height: 12),
-
-        // HuggingFace token input
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('HuggingFace API token',
-                    style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 4),
-                Text(
-                  'Required to download Gemma (gated model). '
-                  'Get yours at huggingface.co/settings/tokens',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: tokenController,
-                  obscureText: !showToken,
-                  decoration: InputDecoration(
-                    hintText: 'hf_xxxxxxxxxxxxxxxxxxxx',
-                    border: const OutlineInputBorder(),
-                    isDense: true,
-                    suffixIcon: IconButton(
-                      icon: Icon(showToken ? Icons.visibility_off : Icons.visibility),
-                      onPressed: onToggleToken,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
         if (errorMessage.isNotEmpty) ...[
           const SizedBox(height: 8),
           Text(errorMessage,
               style: const TextStyle(color: Colors.red, fontSize: 13)),
         ],
-
         const SizedBox(height: 16),
         FilledButton.icon(
           onPressed: onDownload,
           icon: const Icon(Icons.download),
-          label: Text('Download ${selected.sizeLabel}'),
+          label: Text('Download ${model.sizeLabel}'),
           style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
         ),
       ],
@@ -508,20 +400,22 @@ class _LoadedCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(Icons.verified_user, size: 48, color: Colors.green),
+            const Icon(Icons.check_circle, size: 48, color: Colors.green),
             const SizedBox(height: 12),
-            const Text('Gemma 4 is active',
+            const Text('Gemma 4 is ready',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.green)),
-            const SizedBox(height: 4),
-            const Text(
-                'AI fraud detection will run on every call.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13)),
             const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: () => Navigator.pushNamed(context, '/chat'),
+              icon: const Icon(Icons.chat),
+              label: const Text('Start Chatting'),
+              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            ),
+            const SizedBox(height: 8),
             TextButton.icon(
               onPressed: onDelete,
               icon: const Icon(Icons.delete_outline),
@@ -533,55 +427,6 @@ class _LoadedCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _HowToGetTokenCard extends StatelessWidget {
-  const _HowToGetTokenCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: ExpansionTile(
-        leading: const Icon(Icons.help_outline),
-        title: const Text('How to get a HuggingFace token'),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _step('1', 'Create a free account at huggingface.co'),
-                _step('2', 'Go to huggingface.co/google/gemma-4-1b-it-litert-preview and accept the Gemma terms of use.'),
-                _step('3', 'Go to huggingface.co/settings/tokens and create a new Read token.'),
-                _step('4', 'Paste the token (starts with hf_…) in the field above and tap Download.'),
-                const SizedBox(height: 8),
-                const Text(
-                  'The model file (~1.3 GB) is saved to the app\'s private storage. '
-                  'The download resumes automatically if interrupted.',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _step(String n, String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              radius: 11,
-              child: Text(n, style: const TextStyle(fontSize: 11)),
-            ),
-            const SizedBox(width: 10),
-            Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
-          ],
-        ),
-      );
 }
 
 // ── Data class ────────────────────────────────────────────────────────────────

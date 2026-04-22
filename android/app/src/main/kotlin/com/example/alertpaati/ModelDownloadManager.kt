@@ -86,24 +86,25 @@ class ModelDownloadManager(private val context: Context) {
             return activeDownloadId
         }
 
-        val destDir = File(context.filesDir, "models").also { it.mkdirs() }
+        // DownloadManager cannot write to internal storage (filesDir) on API 29+.
+        // Use app-private external files dir — no extra permissions needed.
+        val destDir = context.getExternalFilesDir("models")?.also { it.mkdirs() }
+            ?: File(context.filesDir, "models").also { it.mkdirs() }
         val destFile = File(destDir, destFileName)
 
         // Delete stale partial file
         if (destFile.exists()) destFile.delete()
 
         val request = DownloadManager.Request(Uri.parse(url)).apply {
-            setTitle("KAVACH — Downloading AI model")
+            setTitle("Downloading Gemma 4 model")
             setDescription(destFileName)
-            setDestinationUri(Uri.fromFile(destFile))
+            setDestinationInExternalFilesDir(context, "models", destFileName)
             setNotificationVisibility(
                 DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
             )
             if (authToken != null) {
                 addRequestHeader("Authorization", "Bearer $authToken")
             }
-            // Allow download over both WiFi and mobile data;
-            // caller can restrict if desired.
             setAllowedOverMetered(true)
             setAllowedOverRoaming(false)
         }
@@ -134,8 +135,13 @@ class ModelDownloadManager(private val context: Context) {
      * Returns the absolute path of the already-downloaded model, or null.
      */
     fun savedModelPath(): String? {
-        val path = prefs.getString(PREF_MODEL_PATH, null) ?: return null
-        return if (File(path).exists()) path else null
+        val path = prefs.getString(PREF_MODEL_PATH, null)
+        if (path != null && File(path).exists()) return path
+        // Fallback: check external files dir directly (handles reinstalls / path migration)
+        val externalDir = context.getExternalFilesDir("models") ?: return null
+        return externalDir.listFiles()
+            ?.firstOrNull { it.name.endsWith(".litertlm") || it.name.endsWith(".bin") }
+            ?.absolutePath
     }
 
     /**
