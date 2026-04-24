@@ -36,6 +36,18 @@ class MainActivity : FlutterActivity() {
         modelDownloader.resumeIfActive()
     }
 
+//    try {
+//        // Tenta carregar o driver da GPU diretamente da pasta protegida do fabricante
+//        System.load("/vendor/lib64/libOpenCL.so")
+//    } catch (e: UnsatisfiedLinkError) {
+//        try {
+//            // Tenta um caminho alternativo comum em chips Samsung
+//            System.load("/system/vendor/lib64/libOpenCL.so")
+//        } catch (e2: UnsatisfiedLinkError) {
+//            Log.e("GPU_FORCE", "Não foi possível quebrar a trava do driver OpenCL.")
+//        }
+//    }
+
     private fun setupModelChannel(engine: FlutterEngine) {
         MethodChannel(engine.dartExecutor.binaryMessenger, CH_MODEL)
             .setMethodCallHandler { call, result ->
@@ -72,6 +84,7 @@ class MainActivity : FlutterActivity() {
                             result.error("NO_MODEL", "No model file found", null)
                             return@setMethodCallHandler
                         }
+
                         scope.launch(Dispatchers.IO) {
                             try {
                                 gemmaEngine.loadModel(path)

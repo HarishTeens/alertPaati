@@ -13,7 +13,7 @@ const _kModelVariants = [
     sizeLabel: '~2.6 GB',
     url: 'https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm'
         '/resolve/main/gemma-4-E2B-it.litertlm',
-    useGpu: false,
+    useGpu: true,
   ),
 ];
 

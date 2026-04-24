@@ -6,6 +6,7 @@ import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
+import com.google.ai.edge.litertlm.Backend
 
 class GemmaEngine(private val context: Context) {
 
@@ -23,7 +24,10 @@ class GemmaEngine(private val context: Context) {
         engine?.close()
         conversation = null
 
-        val config = EngineConfig(modelPath = modelPath)
+        val config = EngineConfig(modelPath = modelPath, backend = Backend.GPU())
+
+        print(config)
+
         engine = Engine(config).also { it.initialize() }
         conversation = engine!!.createConversation()
         Log.d(TAG, "Model loaded ✓")

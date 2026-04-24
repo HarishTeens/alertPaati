@@ -95,8 +95,8 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           const Divider(height: 1),
           Padding(
-            padding: EdgeInsets.fromLTRB(
-              12, 8, 12, MediaQuery.of(context).viewInsets.bottom + 8,
+            padding: const EdgeInsets.fromLTRB(
+              10, 8, 8, 8,
             ),
             child: Row(
               children: [
@@ -111,7 +111,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       border: OutlineInputBorder(),
                       isDense: true,
                       contentPadding: EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10,
+                        horizontal: 12, vertical: 12,
                       ),
                     ),
                   ),
