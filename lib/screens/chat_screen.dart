@@ -108,12 +108,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Gemma 4 Chat'),
-        centerTitle: true,
-      ),
-      body: Column(
+    return Column(
         children: [
           Expanded(
             child: _messages.isEmpty
@@ -162,7 +157,6 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
         ],
-      ),
     );
   }
 }

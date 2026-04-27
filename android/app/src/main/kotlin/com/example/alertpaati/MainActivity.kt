@@ -20,11 +20,14 @@ class MainActivity : FlutterActivity() {
         private const val CH_CHAT = "kavach/chat"
         private const val EV_DOWNLOAD = "kavach/downloadProgress"
         private const val EV_CHAT = "kavach/chatStream"
+        private const val CH_SPEECH = "kavach/speech"
+        private const val EV_SPEECH = "kavach/speechEvents"
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var gemmaEngine: GemmaEngine
     private lateinit var modelDownloader: ModelDownloadManager
+    private lateinit var speechManager: SpeechManager
     private var chatTokenSink: EventChannel.EventSink? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -32,11 +35,13 @@ class MainActivity : FlutterActivity() {
 
         gemmaEngine = GemmaEngine(this)
         modelDownloader = ModelDownloadManager(this)
+        speechManager = SpeechManager(this)
 
         setupModelChannel(flutterEngine)
         setupChatChannel(flutterEngine)
         setupDownloadProgressChannel(flutterEngine)
         setupChatStreamChannel(flutterEngine)
+        setupSpeechChannel(flutterEngine)
 
         modelDownloader.resumeIfActive()
     }
@@ -160,9 +165,36 @@ class MainActivity : FlutterActivity() {
             })
     }
 
+    private fun setupSpeechChannel(engine: FlutterEngine) {
+        MethodChannel(engine.dartExecutor.binaryMessenger, CH_SPEECH)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "startListening" -> {
+                        speechManager.startListening()
+                        result.success(null)
+                    }
+                    "stopListening" -> {
+                        speechManager.stopListening()
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        EventChannel(engine.dartExecutor.binaryMessenger, EV_SPEECH)
+            .setStreamHandler(object : EventChannel.StreamHandler {
+                override fun onListen(args: Any?, sink: EventChannel.EventSink) {
+                    speechManager.eventSink = sink
+                }
+                override fun onCancel(args: Any?) {
+                    speechManager.eventSink = null
+                }
+            })
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         gemmaEngine.close()
         modelDownloader.release()
+        speechManager.destroy()
     }
 }

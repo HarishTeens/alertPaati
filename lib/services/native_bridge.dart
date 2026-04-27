@@ -8,11 +8,14 @@ class NativeBridge {
 
   static const _modelChannel = MethodChannel('kavach/model');
   static const _chatChannel = MethodChannel('kavach/chat');
+  static const _speechChannel = MethodChannel('kavach/speech');
   static const _downloadProgress = EventChannel('kavach/downloadProgress');
   static const _chatTokens = EventChannel('kavach/chatStream');
+  static const _speechEvents = EventChannel('kavach/speechEvents');
 
   Stream<Map<String, dynamic>>? _downloadProgressStream;
   Stream<Map<String, dynamic>>? _chatTokenStream;
+  Stream<Map<String, dynamic>>? _speechStream;
 
   Stream<Map<String, dynamic>> get downloadProgress {
     _downloadProgressStream ??= _downloadProgress
@@ -67,5 +70,20 @@ class NativeBridge {
 
   Future<void> resetConversation() async {
     await _chatChannel.invokeMethod('resetConversation');
+  }
+
+  Stream<Map<String, dynamic>> get speechStream {
+    _speechStream ??= _speechEvents
+        .receiveBroadcastStream()
+        .map((e) => Map<String, dynamic>.from(e as Map));
+    return _speechStream!;
+  }
+
+  Future<void> startListening() async {
+    await _speechChannel.invokeMethod('startListening');
+  }
+
+  Future<void> stopListening() async {
+    await _speechChannel.invokeMethod('stopListening');
   }
 }

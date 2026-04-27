@@ -12,7 +12,11 @@
       "Bash(adb shell *)",
       "Bash(adb -s emulator-5554 push ~/Downloads/gemma-4-E2B-it.litertlm \"/sdcard/Android/data/com.example.alertpaati/files/models/\")",
       "Bash(adb devices *)",
-      "Bash(adb -s 2fc01ffb push ~/Downloads/gemma-4-E2B-it.litertlm \"/sdcard/Android/data/com.example.alertpaati/files/models/\")"
+      "Bash(adb -s 2fc01ffb push ~/Downloads/gemma-4-E2B-it.litertlm \"/sdcard/Android/data/com.example.alertpaati/files/models/\")",
+      "Bash(adb -s RZCX10B37PP shell mkdir -p /sdcard/Android/data/com.example.alertpaati/files/models)",
+      "Bash(adb -s RZCX10B37PP push ~/Downloads/gemma-4-E2B-it.litertlm \"/sdcard/Android/data/com.example.alertpaati/files/models/\")",
+      "Bash(adb -s R9ZX504XFAW shell mkdir -p /sdcard/Android/data/com.example.alertpaati/files/models)",
+      "Bash(adb -s R9ZX504XFAW push ~/Downloads/gemma-4-E2B-it.litertlm \"/sdcard/Android/data/com.example.alertpaati/files/models/\")"
     ]
   }
 }

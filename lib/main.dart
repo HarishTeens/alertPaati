@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'models/model_state.dart';
 import 'screens/model_screen.dart';
-import 'screens/chat_screen.dart';
+import 'screens/main_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,7 +40,7 @@ class App extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (_) => const ModelScreen(),
-        '/chat': (_) => const ChatScreen(),
+        '/chat': (_) => const MainScreen(),
       },
     );
   }
