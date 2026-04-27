@@ -19,14 +19,17 @@ class GemmaEngine(private val context: Context) {
 
     val isLoaded: Boolean get() = engine != null
 
-    fun loadModel(modelPath: String) {
-        Log.d(TAG, "Loading Gemma 4 from $modelPath")
+    fun loadModel(modelPath: String, useGpu: Boolean = false) {
+        Log.d(TAG, "Loading Gemma 4 from $modelPath (gpu=$useGpu)")
         engine?.close()
         conversation = null
 
-        engine = tryLoadWithBackend(modelPath, Backend.GPU())
-            ?: tryLoadWithBackend(modelPath, Backend.CPU())
-            ?: error("Failed to load model on both GPU and CPU")
+        engine = if (useGpu) {
+            tryLoadWithBackend(modelPath, Backend.GPU())
+                ?: tryLoadWithBackend(modelPath, Backend.CPU())
+        } else {
+            tryLoadWithBackend(modelPath, Backend.CPU())
+        } ?: error("Failed to load model on both GPU and CPU")
         conversation = engine!!.createConversation()
         Log.d(TAG, "Model loaded ✓")
     }

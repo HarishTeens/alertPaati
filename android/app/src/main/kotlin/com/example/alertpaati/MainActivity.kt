@@ -72,9 +72,10 @@ class MainActivity : FlutterActivity() {
                             result.error("NO_MODEL", "No model file found", null)
                             return@setMethodCallHandler
                         }
+                        val useGpu = call.argument<Boolean>("useGpu") ?: false
                         scope.launch(Dispatchers.IO) {
                             try {
-                                gemmaEngine.loadModel(path)
+                                gemmaEngine.loadModel(path, useGpu)
                                 scope.launch(Dispatchers.Main) { result.success(null) }
                             } catch (e: Exception) {
                                 Log.e(TAG, "loadModel failed", e)

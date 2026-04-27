@@ -86,6 +86,21 @@ class ModelDownloadManager(private val context: Context) {
             return activeDownloadId
         }
 
+        // Debug shortcut: reuse any model already on device instead of downloading.
+        // Push from Mac once with:
+        //   adb push ~/Downloads/gemma-4-E2B-it.litertlm \
+        //     "/sdcard/Android/data/com.example.alertpaati/files/models/"
+        val isDebug = context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
+        if (isDebug) {
+            val existing = savedModelPath()
+            if (existing != null) {
+                Log.d(TAG, "[DEBUG] Reusing local model at $existing — skipping download")
+                prefs.edit().putString(PREF_MODEL_PATH, existing).apply()
+                emit(mapOf("status" to "completed", "progress" to 100, "modelPath" to existing))
+                return -1L
+            }
+        }
+
         // DownloadManager cannot write to internal storage (filesDir) on API 29+.
         // Use app-private external files dir — no extra permissions needed.
         val destDir = context.getExternalFilesDir("models")?.also { it.mkdirs() }

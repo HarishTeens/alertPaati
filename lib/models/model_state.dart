@@ -61,6 +61,9 @@ class ModelState extends ChangeNotifier {
 
   // Called for each event from kavach/downloadProgress EventChannel
   void applyDownloadEvent(Map<String, dynamic> event) {
+    // Model is loading or already loaded — download events are irrelevant
+    if (_status == ModelStatus.loading || _status == ModelStatus.ready) return;
+
     final statusStr = event['status'] as String? ?? 'idle';
     _progressPercent = (event['progress'] as int?) ?? _progressPercent;
     _downloadedBytes = (event['downloadedBytes'] as int?) ?? _downloadedBytes;
