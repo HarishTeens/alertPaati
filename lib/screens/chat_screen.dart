@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/native_bridge.dart';
 
@@ -13,12 +14,54 @@ class _ChatScreenState extends State<ChatScreen> {
   final _scrollController = ScrollController();
   final List<_Message> _messages = [];
   bool _isThinking = false;
+  StreamSubscription<Map<String, dynamic>>? _tokenSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _tokenSub = NativeBridge.instance.chatTokenStream.listen(
+      _onToken,
+      onError: _onTokenError,
+    );
+  }
 
   @override
   void dispose() {
+    _tokenSub?.cancel();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onToken(Map<String, dynamic> event) {
+    final done = event['done'] as bool? ?? false;
+    if (done) {
+      if (mounted) setState(() => _isThinking = false);
+      return;
+    }
+    final token = event['token'] as String? ?? '';
+    if (!mounted || _messages.isEmpty) return;
+    setState(() {
+      // Append each token to the existing bubble text
+      if (!_messages.last.isUser) {
+        final current = _messages.last.text;
+        _messages[_messages.length - 1] = _Message(text: current + token, isUser: false);
+      }
+    });
+    _scrollToBottom();
+  }
+
+  void _onTokenError(Object error) {
+    if (!mounted) return;
+    setState(() {
+      if (_messages.isNotEmpty && !_messages.last.isUser) {
+        _messages[_messages.length - 1] =
+            _Message(text: 'Error: $error', isUser: false, isError: true);
+      } else {
+        _messages.add(_Message(text: 'Error: $error', isUser: false, isError: true));
+      }
+      _isThinking = false;
+    });
   }
 
   Future<void> _send() async {
@@ -27,27 +70,24 @@ class _ChatScreenState extends State<ChatScreen> {
 
     setState(() {
       _messages.add(_Message(text: text, isUser: true));
+      _messages.add(_Message(text: '', isUser: false)); // streaming placeholder
       _isThinking = true;
     });
     _controller.clear();
     _scrollToBottom();
 
     try {
-      final reply = await NativeBridge.instance.chat(text);
-      if (mounted) {
-        setState(() {
-          _messages.add(_Message(text: reply, isUser: false));
-          _isThinking = false;
-        });
-        _scrollToBottom();
-      }
+      // Returns immediately; tokens arrive via _onToken
+      await NativeBridge.instance.startChat(text);
     } catch (e) {
       if (mounted) {
         setState(() {
-          _messages.add(_Message(text: 'Error: $e', isUser: false, isError: true));
+          if (_messages.isNotEmpty && !_messages.last.isUser) {
+            _messages[_messages.length - 1] =
+                _Message(text: 'Error: $e', isUser: false, isError: true);
+          }
           _isThinking = false;
         });
-        _scrollToBottom();
       }
     }
   }
@@ -86,11 +126,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 : ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    itemCount: _messages.length + (_isThinking ? 1 : 0),
-                    itemBuilder: (context, i) {
-                      if (i == _messages.length) return const _ThinkingBubble();
-                      return _Bubble(message: _messages[i]);
-                    },
+                    itemCount: _messages.length,
+                    itemBuilder: (context, i) => _Bubble(message: _messages[i]),
                   ),
           ),
           const Divider(height: 1),
@@ -138,6 +175,11 @@ class _Bubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isUser = message.isUser;
+
+    // Show animated dots while streaming placeholder is empty
+    if (!isUser && message.text.isEmpty) {
+      return const _ThinkingBubble();
+    }
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,

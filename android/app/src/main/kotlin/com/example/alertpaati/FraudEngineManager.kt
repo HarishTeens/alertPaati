@@ -7,6 +7,8 @@ import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
+import com.google.ai.edge.litertlm.Message
+import kotlinx.coroutines.flow.Flow
 
 class GemmaEngine(private val context: Context) {
 
@@ -51,12 +53,9 @@ class GemmaEngine(private val context: Context) {
         }
     }
 
-    fun chat(message: String): String {
+    fun chatStreamFlow(message: String): Flow<Message> {
         val conv = conversation ?: error("Model not loaded")
-        val reply = conv.sendMessage(message)
-        return reply.contents.contents
-            .filterIsInstance<Content.Text>()
-            .joinToString("") { it.text }
+        return conv.sendMessageAsync(message)
     }
 
     fun resetConversation() {

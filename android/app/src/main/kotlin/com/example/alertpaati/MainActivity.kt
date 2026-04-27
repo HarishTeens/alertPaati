@@ -1,6 +1,7 @@
 package com.example.alertpaati
 
 import android.util.Log
+import com.google.ai.edge.litertlm.Content
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -8,6 +9,7 @@ import io.flutter.plugin.common.MethodChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 class MainActivity : FlutterActivity() {
@@ -17,11 +19,13 @@ class MainActivity : FlutterActivity() {
         private const val CH_MODEL = "kavach/model"
         private const val CH_CHAT = "kavach/chat"
         private const val EV_DOWNLOAD = "kavach/downloadProgress"
+        private const val EV_CHAT = "kavach/chatStream"
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var gemmaEngine: GemmaEngine
     private lateinit var modelDownloader: ModelDownloadManager
+    private var chatTokenSink: EventChannel.EventSink? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -32,6 +36,7 @@ class MainActivity : FlutterActivity() {
         setupModelChannel(flutterEngine)
         setupChatChannel(flutterEngine)
         setupDownloadProgressChannel(flutterEngine)
+        setupChatStreamChannel(flutterEngine)
 
         modelDownloader.resumeIfActive()
     }
@@ -94,20 +99,31 @@ class MainActivity : FlutterActivity() {
         MethodChannel(engine.dartExecutor.binaryMessenger, CH_CHAT)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
-                    "chat" -> {
+                    "startChat" -> {
                         val message = call.argument<String>("message") ?: run {
                             result.error("INVALID_ARG", "message required", null)
                             return@setMethodCallHandler
                         }
+                        // Return immediately so Flutter can start listening before tokens arrive
+                        result.success(null)
                         scope.launch(Dispatchers.IO) {
-                            try {
-                                val reply = gemmaEngine.chat(message)
-                                scope.launch(Dispatchers.Main) { result.success(reply) }
-                            } catch (e: Exception) {
-                                Log.e(TAG, "chat failed", e)
-                                scope.launch(Dispatchers.Main) {
-                                    result.error("CHAT_ERROR", e.message, null)
+                            gemmaEngine.chatStreamFlow(message)
+                                .catch { e ->
+                                    Log.e(TAG, "chatStream error", e)
+                                    scope.launch(Dispatchers.Main) {
+                                        chatTokenSink?.error("CHAT_ERROR", e.message, null)
+                                    }
                                 }
+                                .collect { msg ->
+                                    val text = msg.contents.contents
+                                        .filterIsInstance<Content.Text>()
+                                        .joinToString("") { it.text }
+                                    scope.launch(Dispatchers.Main) {
+                                        chatTokenSink?.success(mapOf("token" to text, "done" to false))
+                                    }
+                                }
+                            scope.launch(Dispatchers.Main) {
+                                chatTokenSink?.success(mapOf("token" to "", "done" to true))
                             }
                         }
                     }
@@ -128,6 +144,18 @@ class MainActivity : FlutterActivity() {
                 }
                 override fun onCancel(args: Any?) {
                     modelDownloader.progressSink = null
+                }
+            })
+    }
+
+    private fun setupChatStreamChannel(engine: FlutterEngine) {
+        EventChannel(engine.dartExecutor.binaryMessenger, EV_CHAT)
+            .setStreamHandler(object : EventChannel.StreamHandler {
+                override fun onListen(args: Any?, sink: EventChannel.EventSink) {
+                    chatTokenSink = sink
+                }
+                override fun onCancel(args: Any?) {
+                    chatTokenSink = null
                 }
             })
     }

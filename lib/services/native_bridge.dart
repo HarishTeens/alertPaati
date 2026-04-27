@@ -9,14 +9,23 @@ class NativeBridge {
   static const _modelChannel = MethodChannel('kavach/model');
   static const _chatChannel = MethodChannel('kavach/chat');
   static const _downloadProgress = EventChannel('kavach/downloadProgress');
+  static const _chatTokens = EventChannel('kavach/chatStream');
 
   Stream<Map<String, dynamic>>? _downloadProgressStream;
+  Stream<Map<String, dynamic>>? _chatTokenStream;
 
   Stream<Map<String, dynamic>> get downloadProgress {
     _downloadProgressStream ??= _downloadProgress
         .receiveBroadcastStream()
         .map((e) => Map<String, dynamic>.from(e as Map));
     return _downloadProgressStream!;
+  }
+
+  Stream<Map<String, dynamic>> get chatTokenStream {
+    _chatTokenStream ??= _chatTokens
+        .receiveBroadcastStream()
+        .map((e) => Map<String, dynamic>.from(e as Map));
+    return _chatTokenStream!;
   }
 
   StreamSubscription<Map<String, dynamic>> bindDownloadProgress(
@@ -51,11 +60,12 @@ class NativeBridge {
     await _modelChannel.invokeMethod('loadModel', {'useGpu': useGpu});
   }
 
-  Future<String> chat(String message) async {
-    final result = await _chatChannel.invokeMethod<String>(
-      'chat',
-      {'message': message},
-    );
-    return result ?? '';
+  /// Starts generation and returns immediately. Tokens arrive via [chatTokenStream].
+  Future<void> startChat(String message) async {
+    await _chatChannel.invokeMethod('startChat', {'message': message});
+  }
+
+  Future<void> resetConversation() async {
+    await _chatChannel.invokeMethod('resetConversation');
   }
 }
